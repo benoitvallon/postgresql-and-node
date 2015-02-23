@@ -73,4 +73,43 @@ router.get('/api/v1/todos', function(req, res) {
 
 });
 
+router.put('/api/v1/todos/:todo_id', function(req, res) {
+
+    var results = [];
+
+    // Grab data from the URL parameters
+    var id = req.params.todo_id;
+
+    // Grab data from http request
+    var data = {text: req.body.text, complete: req.body.complete};
+
+    // Get a Postgres client from the connection pool
+    pg.connect(connectionString, function(err, client, done) {
+
+        // SQL Query > Update Data
+        client.query("UPDATE items SET text=($1), complete=($2) WHERE id=($3)", [data.text, data.complete, id]);
+
+        // SQL Query > Select Data
+        var query = client.query("SELECT * FROM items ORDER BY id ASC");
+
+        // Stream results back one row at a time
+        query.on('row', function(row) {
+            results.push(row);
+        });
+
+        // After all data is returned, close connection and return results
+        query.on('end', function() {
+            client.end();
+            return res.json(results);
+        });
+
+        // Handle Errors
+        if(err) {
+          console.log(err);
+        }
+
+    });
+
+});
+
 module.exports = router;
